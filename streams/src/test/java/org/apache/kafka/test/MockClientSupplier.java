@@ -16,7 +16,7 @@
  */
 package org.apache.kafka.test;
 
-import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.MockAdminClient;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.MockConsumer;
@@ -43,7 +43,7 @@ public class MockClientSupplier implements KafkaClientSupplier {
 
     private String applicationId;
 
-    public final List<MockProducer> producers = new LinkedList<>();
+    public final List<MockProducer<byte[], byte[]>> producers = new LinkedList<>();
 
     public final MockConsumer<byte[], byte[]> consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     public final MockConsumer<byte[], byte[]> restoreConsumer = new MockConsumer<>(OffsetResetStrategy.LATEST);
@@ -57,8 +57,8 @@ public class MockClientSupplier implements KafkaClientSupplier {
     }
 
     @Override
-    public AdminClient getAdminClient(final Map<String, Object> config) {
-        return new MockAdminClient(cluster.nodes(), cluster.nodeById(0));
+    public Admin getAdmin(final Map<String, Object> config) {
+        return new MockAdminClient(cluster.nodes(), cluster.nodeById(-1));
     }
 
     @Override

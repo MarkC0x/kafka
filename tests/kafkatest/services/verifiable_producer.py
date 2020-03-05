@@ -91,6 +91,7 @@ class VerifiableProducer(KafkaPathResolverMixin, VerifiableClientMixin, Backgrou
         for node in self.nodes:
             node.version = version
         self.acked_values = []
+        self.acked_values_by_partition = {}
         self._last_acked_offsets = {}
         self.not_acked_values = []
         self.produced_count = {}
@@ -178,7 +179,13 @@ class VerifiableProducer(KafkaPathResolverMixin, VerifiableClientMixin, Backgrou
 
                     elif data["name"] == "producer_send_success":
                         partition = TopicPartition(data["topic"], data["partition"])
-                        self.acked_values.append(self.message_validator(data["value"]))
+                        value = self.message_validator(data["value"])
+                        self.acked_values.append(value)
+
+                        if partition not in self.acked_values_by_partition:
+                            self.acked_values_by_partition[partition] = []
+                        self.acked_values_by_partition[partition].append(value)
+
                         self._last_acked_offsets[partition] = data["offset"]
                         self.produced_count[idx] += 1
 
@@ -256,6 +263,11 @@ class VerifiableProducer(KafkaPathResolverMixin, VerifiableClientMixin, Backgrou
             return self.acked_values
 
     @property
+    def acked_by_partition(self):
+        with self.lock:
+            return self.acked_values_by_partition
+
+    @property
     def not_acked(self):
         with self.lock:
             return self.not_acked_values
@@ -278,7 +290,11 @@ class VerifiableProducer(KafkaPathResolverMixin, VerifiableClientMixin, Backgrou
             return True
 
     def stop_node(self, node):
-        self.kill_node(node, clean_shutdown=True, allow_fail=False)
+        # There is a race condition on shutdown if using `max_messages` since the
+        # VerifiableProducer will shutdown automatically when all messages have been
+        # written. In this case, the process will be gone and the signal will fail.
+        allow_fail = self.max_messages > 0
+        self.kill_node(node, clean_shutdown=True, allow_fail=allow_fail)
 
         stopped = self.wait_node(node, timeout_sec=self.stop_timeout_sec)
         assert stopped, "Node %s: did not stop within the specified timeout of %s seconds" % \

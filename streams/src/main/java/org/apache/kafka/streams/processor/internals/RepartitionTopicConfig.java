@@ -31,12 +31,10 @@ public class RepartitionTopicConfig extends InternalTopicConfig {
 
     private static final Map<String, String> REPARTITION_TOPIC_DEFAULT_OVERRIDES;
     static {
-        final Map<String, String> tempTopicDefaultOverrides = new HashMap<>();
+        final Map<String, String> tempTopicDefaultOverrides = new HashMap<>(INTERNAL_TOPIC_DEFAULT_OVERRIDES);
         tempTopicDefaultOverrides.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE);
-        tempTopicDefaultOverrides.put(TopicConfig.SEGMENT_INDEX_BYTES_CONFIG, "52428800");               // 50 MB
-        tempTopicDefaultOverrides.put(TopicConfig.SEGMENT_BYTES_CONFIG, "52428800");                     // 50 MB
-        tempTopicDefaultOverrides.put(TopicConfig.SEGMENT_MS_CONFIG, "600000");                          // 10 min
-        tempTopicDefaultOverrides.put(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(Long.MAX_VALUE));  // Infinity
+        tempTopicDefaultOverrides.put(TopicConfig.SEGMENT_BYTES_CONFIG, "52428800");         // 50 MB
+        tempTopicDefaultOverrides.put(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(-1));  // Infinity
         REPARTITION_TOPIC_DEFAULT_OVERRIDES = Collections.unmodifiableMap(tempTopicDefaultOverrides);
     }
 
@@ -51,6 +49,7 @@ public class RepartitionTopicConfig extends InternalTopicConfig {
      * @param additionalRetentionMs - added to retention to allow for clock drift etc
      * @return Properties to be used when creating the topic
      */
+    @Override
     public Map<String, String> getProperties(final Map<String, String> defaultProperties, final long additionalRetentionMs) {
         // internal topic config overridden rule: library overrides < global config overrides < per-topic config overrides
         final Map<String, String> topicConfig = new HashMap<>(REPARTITION_TOPIC_DEFAULT_OVERRIDES);
